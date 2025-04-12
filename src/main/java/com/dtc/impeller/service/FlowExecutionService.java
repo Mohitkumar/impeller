@@ -21,17 +21,7 @@ public class FlowExecutionService {
 
     private JsonMapper mapper = new JsonMapper();
 
-
-    public FlowInstance createFlow(String workflowDefinition){
-        try {
-            Workflow workflow = mapper.readValue(workflowDefinition, Workflow.class);
-            return buildFlow(workflow);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("workflow definition is not valid");
-        }
-    }
-
-    private FlowInstance buildFlow(Workflow workflow){
+    public FlowInstance buildFlow(String name, Workflow workflow){
         ActionGraph actionGraph = new ActionGraph();
         List<ActionDefinition> actions = workflow.getActions();
         Map<String, ActionGraph.Node> actionMap = new HashMap<>();
@@ -40,7 +30,7 @@ public class FlowExecutionService {
         }
         actionGraph.setRoot(actionMap.get(workflow.getRoot()));
         actionGraph.setActionMap(actionMap);
-        actionGraph.setName(workflow.getCarrier() +"_" + workflow.getType());
+        actionGraph.setName(name);
         for (ActionDefinition action : actions) {
             Map<String, List<String>> next = action.getNext();
             if(next == null){
@@ -58,7 +48,7 @@ public class FlowExecutionService {
         }
         return flow;
     }
-    
+
 
     public Context createContext(Object data, Map<String,Object> config){
         Context context = new Context(data, config);

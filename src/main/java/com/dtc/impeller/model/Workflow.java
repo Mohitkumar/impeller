@@ -3,21 +3,11 @@ package com.dtc.impeller.model;
 import java.util.List;
 
 public class Workflow {
-    private String carrier;
-
     private String type;
 
     private String root;
 
     private List<ActionDefinition> actions;
-
-    public String getCarrier() {
-        return carrier;
-    }
-
-    public void setCarrier(String carrier) {
-        this.carrier = carrier;
-    }
 
     public String getType() {
         return type;
