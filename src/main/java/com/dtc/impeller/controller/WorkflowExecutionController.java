@@ -3,6 +3,7 @@ package com.dtc.impeller.controller;
 import com.dtc.impeller.flow.Context;
 import com.dtc.impeller.flow.FlowFailedException;
 import com.dtc.impeller.flow.FlowInstance;
+import com.dtc.impeller.model.FlowExecutionResponse;
 import com.dtc.impeller.model.WorkflowExecutionRequest;
 import com.dtc.impeller.service.FlowExecutionService;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -29,9 +30,9 @@ public class WorkflowExecutionController {
             FlowInstance flowInstance = flowExecutionService.buildFlow(workflowExecutionRequest.getName(),
                 workflowExecutionRequest.getDefinition());
             Context context = new Context(workflowExecutionRequest.getInput(), Map.of("test", "test"));
-            flowInstance.execute(context);
-            return Response.ok().build();
-        } catch (FlowFailedException e) {
+            FlowExecutionResponse response = flowInstance.execute(context);
+            return Response.ok(response).build();
+        } catch (Exception e) {
             return Response.status(Status.INTERNAL_SERVER_ERROR)
                          .entity(e.getMessage())
                          .build();

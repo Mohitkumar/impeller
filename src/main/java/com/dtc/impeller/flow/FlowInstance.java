@@ -2,10 +2,7 @@ package com.dtc.impeller.flow;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -13,6 +10,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import com.dtc.impeller.model.FlowExecutionResponse;
+import com.dtc.impeller.model.FlowExecutionStatus;
 import org.apache.commons.net.util.Base64;
 import org.graalvm.polyglot.Value;
 import org.slf4j.Logger;
@@ -25,28 +24,40 @@ import com.jayway.jsonpath.PathNotFoundException;
 
 public class FlowInstance{
     private static final Logger LOGGER = LoggerFactory.getLogger(FlowInstance.class);
-
-    private final ActionGraph actionGraph;
-
     private ExecutorService executorService = Executors.newFixedThreadPool(3);
 
-    public FlowInstance(ActionGraph actionGraph) {
+    private final ActionGraph actionGraph;
+    private String id;
+    private String name;
+
+    public FlowInstance(String name, ActionGraph actionGraph) {
+        this.name = name;
         this.actionGraph = actionGraph;
+        this.id = UUID.randomUUID().toString();
     }
 
-    public void execute(Context context) throws FlowFailedException {
+    public FlowExecutionResponse execute(Context context) {
+        FlowExecutionResponse flowExecutionResponse = new FlowExecutionResponse();
+        flowExecutionResponse.setId(this.id);
+        flowExecutionResponse.setInput(context.getInput());
         try{
             LOGGER.info("starting flow {}", actionGraph.getName());
+            flowExecutionResponse.setStartTime(System.currentTimeMillis());
             execute(actionGraph.getRoot(), context);
+            flowExecutionResponse.setEndTime(System.currentTimeMillis());
             LOGGER.info("completed flow {}, status {}", actionGraph.getName(), "SUCCESS");
+            flowExecutionResponse.setStatus(FlowExecutionStatus.SUCCESS);
         }catch (FlowFailedException e){
-            e.printStackTrace();
-            LOGGER.info("completed flow {}, status {}", actionGraph.getName(), "FAILED");
-            throw e;
-        } catch (Exception e){
-            e.printStackTrace();
-            throw new FlowFailedException(e);
-        }finally {
+            flowExecutionResponse.setStatus(FlowExecutionStatus.FAILED);
+            flowExecutionResponse.setErrorMessage(e.getMessage());
+            flowExecutionResponse.setErrorType("FlowFailedException");
+            LOGGER.info("completed flow {}, status {}, error {}", actionGraph.getName(), "FAILED", e.getMessage());
+        }catch (Exception e){
+            flowExecutionResponse.setStatus(FlowExecutionStatus.FAILED);
+            flowExecutionResponse.setErrorMessage(e.getMessage());
+            flowExecutionResponse.setErrorType("GenericException");
+            LOGGER.info("completed flow {}, status {}, error {}", actionGraph.getName(), "FAILED", e.getMessage());
+        } finally {
             try {
                 context.close();
             } catch (IOException e) {
@@ -61,6 +72,7 @@ public class FlowInstance{
                 executorService.shutdownNow();
             }
         }
+        return flowExecutionResponse;
     }
 
     private void execute(ActionGraph.Node node, Context context) throws FlowFailedException{
@@ -339,7 +351,7 @@ public class FlowInstance{
         }
         return true;
     }
-    
+
     private List<Field> getActionParams(Class<?> aClass, boolean optional){
         List<Field> fields = new ArrayList<>();
         for (Class<?> acls = aClass; acls != null; acls = acls.getSuperclass()) {

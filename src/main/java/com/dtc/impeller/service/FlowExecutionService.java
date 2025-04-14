@@ -42,7 +42,7 @@ public class FlowExecutionService {
                         .put(k, v.stream().map(actionMap::get).collect(Collectors.toList()));
             });
         }
-        FlowInstance flow = new FlowInstance(actionGraph);
+        FlowInstance flow = new FlowInstance(name, actionGraph);
         if(!flow.validate()){
             throw new RuntimeException("workflow definition is not valid");
         }
